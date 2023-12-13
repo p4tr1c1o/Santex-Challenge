@@ -6,8 +6,9 @@ export function errorHandler(error, request, response?: Response) {
 
 	// TODO: check isOperational
 
+
 	if (response) {
-		return response.sendStatus(500)
+		return response.sendStatus(500).json(error)
 	}
 	process.exit(1)
 }

@@ -1,11 +1,11 @@
 import { Sequelize } from "sequelize"
 
-const sequelize = new Sequelize("sqlite::memory:", {
+const sequelizeDB = new Sequelize("sqlite::memory:", {
 	logging: false
 })
 
 
-sequelize
+sequelizeDB
 	.authenticate()
 	.then(() => {
 		console.info("The connection to the database has been established successfully.")
@@ -14,4 +14,6 @@ sequelize
 		console.error("Unable to connect to the database: %o", { errorMessage: error })
 	})
 
-export default sequelize
+export const syncDatabase = async () => await sequelizeDB.sync({ force: true })
+
+export default sequelizeDB

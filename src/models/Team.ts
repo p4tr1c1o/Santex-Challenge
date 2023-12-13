@@ -1,5 +1,5 @@
 import { DataTypes, Model, } from "sequelize"
-import sequelize from "../database/sequelize"
+import sequelizeDB from "../database/sequelize"
 
 
 class Team extends Model {
@@ -21,12 +21,23 @@ Team.init(
 		},
 		name: {
 			type: DataTypes.STRING,
-			field: "name",
 			allowNull: false,
+		},
+		tla: {
+			type: DataTypes.STRING,
+		},
+		shortName: {
+			type: DataTypes.STRING,
+		},
+		areaName: {
+			type: DataTypes.STRING,
+		},
+		address: {
+			type: DataTypes.STRING,
 		},
 	},
 	{
-		sequelize,
+		sequelize: sequelizeDB,
 		timestamps: false,
 		underscored: true,
 	}
