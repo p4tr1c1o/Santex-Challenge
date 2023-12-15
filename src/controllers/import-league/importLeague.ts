@@ -1,98 +1,80 @@
 import { Response } from "express"
-import sequelizeDB from "../../database/sequelize"
-import Competition from "../../models/Competition"
-import Coach from "../../models/Coach"
-import Player from "../../models/Player"
-import Team from "../../models/Team"
 import { requestOptions } from "../../config/fetch"
-
-type TeamDTO = {
-	name: string,
-	tla: string,
-	areaName: string,
-	shortName: string,
-	address: string,
-}
-
-type PlayerDTO = {
-	name: string,
-	position: string,
-	dateOfBirth: string,
-	nationality: string
-}
-
-type CoachDTO = {
-	name: string,
-	position: string,
-	dateOfBirth: string,
-	nationality: string
-}
+import { AppDataSource } from "../../database/data-source"
+import Competition from "../../entity/Competition"
+import Team from "../../entity/Team"
+import createError from "http-errors"
+import { In } from "typeorm"
+import Coach from "../../entity/Coach"
+import Player from "../../entity/Player"
 
 async function importLeague(req, res: Response, next) {
+	const { leagueCode } = req.body
+	const queryRunner = AppDataSource.createQueryRunner()
+	await queryRunner.connect()
+	await queryRunner.startTransaction()
+
 	try {
-		const { leagueCode } = req.body
-		const transaction = await sequelizeDB.transaction()
-		const teams: Array<TeamDTO> = []
-		const coaches: Array<CoachDTO> = []
-		const players: Array<PlayerDTO> = []
+		const competitionsResult = await fetch(`${process.env.FOOTBALL_API_URL}/competitions/`, requestOptions)
+		if (!competitionsResult.ok)
+			throw createError(competitionsResult.status, competitionsResult.statusText)
 
-		const competitionResult = await fetch(`${process.env.FOOTBALL_API_URL}/competitions/${leagueCode}`, requestOptions)
+		const { competitions: competitionsData } = await competitionsResult.json()
+		const competitions: Array<Competition> = competitionsData?.map(data => ({
+			name: data.name,
+			code: data.code,
+			areaName: data.area?.name
+		}))
 
-		if (!competitionResult.ok) {
-			console.log(competitionResult, "competitionResult")
-			throw new Error(`${competitionResult.status}: ${competitionResult.statusText}`)
-		}
+		await queryRunner.manager.upsert(Competition, competitions, ["name"])
 
-		const competitionData = await competitionResult.json()
+		const teamsResponse = await fetch(`${process.env.FOOTBALL_API_URL}/competitions/${leagueCode}/teams`, requestOptions)
+		if (!teamsResponse.ok)
+			throw new Error(`${teamsResponse.status}: ${teamsResponse.statusText}`)
 
-		await Competition.create({
-			name: competitionData.name,
-			code: competitionData.code,
-			areaCode: competitionData.area?.code,
+		const result = await teamsResponse.json()
+
+		result.teams?.forEach(async data => {
+			const teamResult = await queryRunner.manager.findOneBy(Team, { name: data.name })
+			const team = new Team({
+				id: teamResult?.id,
+				name: data.name,
+				shortName: data.shortName,
+				tla: data.tla,
+				areaName: data.area?.name,
+				address: data.address,
+			})
+
+			const runningCompetitions = await queryRunner.manager.findBy(Competition, {
+				name: In(data.runningCompetitions?.map(x => x.name))
+			})
+			team.competitions = runningCompetitions
+
+			const coachResult = await queryRunner.manager.findOneBy(Coach, { name: data.coach?.name })
+			const coach = new Coach({
+				name: data.coach?.name,
+				dateOfBirth: data.coach?.dateOfBirth,
+				nationality: data.coach?.nationality,
+			})
+			if (coachResult?.id) coach.id == coachResult.id
+
+			const savedTeam = await queryRunner.manager.save(team)
+			const squad = data.squad?.map(player => new Player({
+				name: player.name,
+				dateOfBirth: player.dateOfBirth,
+				nationality: player.nationality,
+				position: player.position,
+				team: savedTeam
+			}))
+
+			await queryRunner.manager.upsert(Player, squad, ["name"])
 		})
 
+		await queryRunner.commitTransaction()
 
-		const result = await fetch(`${process.env.FOOTBALL_API_URL}/competitions/${leagueCode}/teams`, requestOptions)
+		const results = await queryRunner.manager.find(Team, { relations: { squad: true } })
 
-		if (!result.ok) {
-			console.log("result", result)
-			throw new Error(`${competitionResult.status}: ${competitionResult.statusText}`)
-		}
-
-		const data = await result.json()
-
-		data.teams?.forEach(team => {
-			teams.push({
-				name: team.name,
-				tla: team.tla,
-				areaName: team.area?.name,
-				shortName: team.shortName,
-				address: team.address,
-			})
-			coaches.push({
-				name: team.coach?.name,
-				dateOfBirth: team.coach?.dateOfBirth,
-				nationality: team.coach?.nationality,
-				position: team.coach?.position
-			})
-			team.squad?.forEach(player => {
-				players.push({
-					name: player.name,
-					dateOfBirth: player.dateOfBirth,
-					nationality: player.nationality,
-					position: player.position
-				})
-			})
-
-			return
-		})
-
-		await Team.bulkCreate(teams, { transaction })
-		await Coach.bulkCreate(coaches, { transaction })
-		await Player.bulkCreate(players, { transaction })
-		await transaction.commit()
-
-		return res.json({ teams, coaches, players })
+		return res.json(results)
 
 	} catch (error) {
 		return next(error)

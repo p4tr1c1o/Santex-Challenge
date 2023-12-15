@@ -1,8 +1,6 @@
-
 import dotenv from "dotenv"
 import app from "./app"
-import { syncDatabase } from "./database/sequelize"
-
+import { syncDatabase } from "./database/data-source"
 
 dotenv.config()
 

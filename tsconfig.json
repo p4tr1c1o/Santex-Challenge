@@ -1,18 +1,34 @@
 {
 	"compilerOptions": {
-		"target": "es2016", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+		"target": "es2021", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
 		"module": "commonjs", /* Specify what module code is generated. */
 		"types": [
 			"node",
 			"express"
 		],
 		"resolveJsonModule": true, /* Enable importing .json files. */
+		"moduleResolution": "node",
 		"outDir": "dist", /* Specify an output folder for all emitted files. */
 		// "removeComments": true, /* Disable emitting comments. */
 		"esModuleInterop": true, /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
 		"forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
+		"allowSyntheticDefaultImports": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
 		"strict": true, /* Enable all strict type-checking options. */
 		"noImplicitAny": false, /* Enable error reporting for expressions and declarations with an implied 'any' type. */
-		"skipLibCheck": true /* Skip type checking all .d.ts files. */
+		"skipLibCheck": true, /* Skip type checking all .d.ts files. */
+		"strictPropertyInitialization": false
 	}
 }
+// "lib": [
+// 	"es2021"
+// ],
+// "target": "es2021",
+// "module": "es2022",
+// "moduleResolution": "node",
+// "allowSyntheticDefaultImports": true,
+// "outDir": "./build",
+// "emitDecoratorMetadata": true,
+// "experimentalDecorators": true,
+// "sourceMap": true
