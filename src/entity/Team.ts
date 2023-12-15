@@ -25,11 +25,11 @@ class Team {
 	@Column({ nullable: true })
 	address: string
 
-	@OneToOne(() => Coach, { eager: true })
+	@OneToOne(() => Coach, { cascade: true, eager: true })
 	@JoinColumn()
 	coach?: Coach
 
-	@OneToMany(() => Player, (player) => player.team)
+	@OneToMany(() => Player, (player) => player.team, { cascade: true })
 	squad?: Player[]
 
 	@ManyToMany(() => Competition, (competition) => competition.teams, { eager: true })
